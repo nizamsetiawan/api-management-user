@@ -1,56 +1,37 @@
 import { validate } from "../validation/validation.js";
-import { createContactValidation, updateContactValidation } from "../validation/contact-validation.js";
+import {
+  createContactValidation,
+  updateContactValidation,
+} from "../validation/contact-validation.js";
 import { prismaClient } from "../application/database.js";
-import { ResponseError } from "../error/response-error.js";
+import { ResponseError } from "../error/response.error.js";
 
 // Fungsi untuk membuat kontak baru
 const createContact = async (user, request) => {
   // Validasi data kontak
-  const { firstName, lastName, email, phone } = request;
-
-  // Validasi nama depan
-  if (!firstName) {
-    throw new ResponseError(400, "First name is required");
-  }
-
-  // Validasi email
-  if (!email) {
-    throw new ResponseError(400, "Email is required");
-  }
-
-  // Validasi format email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    throw new ResponseError(400, "Invalid email format");
-  }
-
-  // Validasi format nomor telepon
-  if (phone) {
-    const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
-    if (!phoneRegex.test(phone)) {
-      throw new ResponseError(400, "Invalid phone number format");
-    }
-  }
+  const contact = validate(createContactValidation, request);
 
   // Cek apakah email sudah terdaftar untuk user yang sama
-  const existingContact = await prismaClient.contact.findFirst({
-    where: {
-      email: email,
-      userEmail: user.email,
-    },
-  });
+  if (contact.email) {
+    const existingContact = await prismaClient.contact.findFirst({
+      where: {
+        email: contact.email,
+        userEmail: user.email,
+      },
+    });
 
-  if (existingContact) {
-    throw new ResponseError(400, "Email already exists");
+    if (existingContact) {
+      throw new ResponseError(400, "Email already exists");
+    }
   }
 
   // Buat kontak baru
   const result = await prismaClient.contact.create({
     data: {
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      phone,
+      first_name: contact.first_name,
+      last_name: contact.last_name,
+      email: contact.email,
+      phone: contact.phone,
       userEmail: user.email,
     },
   });
@@ -163,34 +144,10 @@ const updateContact = async (user, contactId, request) => {
   }
 
   // Validasi data kontak
-  const { firstName, lastName, email, phone } = request;
-
-  // Validasi nama depan
-  if (!firstName) {
-    throw new ResponseError(400, "First name is required");
-  }
-
-  // Validasi email
-  if (!email) {
-    throw new ResponseError(400, "Email is required");
-  }
-
-  // Validasi format email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    throw new ResponseError(400, "Invalid email format");
-  }
-
-  // Validasi format nomor telepon
-  if (phone) {
-    const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
-    if (!phoneRegex.test(phone)) {
-      throw new ResponseError(400, "Invalid phone number format");
-    }
-  }
+  const contact = validate(updateContactValidation, request);
 
   // Cek apakah kontak ada
-  const contact = await prismaClient.contact.findFirst({
+  const existingContact = await prismaClient.contact.findFirst({
     where: {
       id: contactId,
       userEmail: user.email,
@@ -198,20 +155,20 @@ const updateContact = async (user, contactId, request) => {
   });
 
   // Jika kontak tidak ditemukan, throw error
-  if (!contact) {
+  if (!existingContact) {
     throw new ResponseError(404, "Contact not found");
   }
 
   // Cek apakah email sudah terdaftar untuk user yang sama (kecuali untuk kontak yang sedang diupdate)
-  if (email !== contact.email) {
-    const existingContact = await prismaClient.contact.findFirst({
+  if (contact.email && contact.email !== existingContact.email) {
+    const duplicateContact = await prismaClient.contact.findFirst({
       where: {
-        email: email,
+        email: contact.email,
         userEmail: user.email,
       },
     });
 
-    if (existingContact) {
+    if (duplicateContact) {
       throw new ResponseError(400, "Email already exists");
     }
   }
@@ -222,10 +179,10 @@ const updateContact = async (user, contactId, request) => {
       id: contactId,
     },
     data: {
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      phone,
+      first_name: contact.first_name,
+      last_name: contact.last_name,
+      email: contact.email,
+      phone: contact.phone,
     },
   });
 

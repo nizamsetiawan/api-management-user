@@ -5,7 +5,7 @@ import {
   updateUserValidation,
 } from "../validation/user-validation.js";
 import { prismaClient } from "../application/database.js";
-import { ResponseError } from "../error/response-error.js";
+import { ResponseError } from "../error/response.error.js";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 
@@ -61,7 +61,10 @@ const login = async (request) => {
     throw new ResponseError(401, "Email or password wrong");
   }
 
-  const isPasswordValid = await bcrypt.compare(loginRequest.password, user.password);
+  const isPasswordValid = await bcrypt.compare(
+    loginRequest.password,
+    user.password
+  );
   if (!isPasswordValid) {
     throw new ResponseError(401, "Email or password wrong");
   }

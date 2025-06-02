@@ -1,5 +1,8 @@
 import { validate } from "../validation/validation.js";
-import { createAddressValidation, updateAddressValidation } from "../validation/address-validation.js";
+import {
+  createAddressValidation,
+  updateAddressValidation,
+} from "../validation/address-validation.js";
 import { prismaClient } from "../application/database.js";
 import { ResponseError } from "../error/response.error.js";
 
@@ -136,4 +139,4 @@ export default {
   getAddresses,
   updateAddress,
   removeAddress,
-}; 
+};
