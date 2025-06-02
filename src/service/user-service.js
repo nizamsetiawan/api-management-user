@@ -2,94 +2,80 @@ import { validate } from "../validation/validation.js";
 import {
   loginUserValidation,
   registerUserValidation,
+  updateUserValidation,
 } from "../validation/user-validation.js";
 import { prismaClient } from "../application/database.js";
-import { ResponseError } from "../error/response.error.js";
+import { ResponseError } from "../error/response-error.js";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 
-/**
- * Fungsi untuk registrasi user baru
- * @param {Object} request - Data user yang akan diregistrasi
- * @returns {Promise<Object>} Data user yang berhasil diregistrasi
- */
+// Fungsi untuk registrasi user baru
 const register = async (request) => {
-  // Validasi data request menggunakan schema registerUserValidation
+  // Validasi data request
   const user = validate(registerUserValidation, request);
 
-  // Cek apakah username sudah ada di database
+  // Cek apakah email sudah ada
   const countUser = await prismaClient.user.count({
     where: {
-      username: user.username,
+      email: user.email,
     },
   });
 
-  // Jika username sudah ada (countUser === 1), throw error
   if (countUser === 1) {
-    throw new ResponseError(400, "User already exists with this email");
+    throw new ResponseError(400, "Email already exists");
   }
 
-  // Enkripsi password menggunakan bcrypt dengan 10 rounds
+  // Enkripsi password
   user.password = await bcrypt.hash(user.password, 10);
 
-  // Simpan data user baru ke database
-  // Hanya return username dan name (tidak termasuk password)
+  // Simpan user baru ke database
   return prismaClient.user.create({
     data: user,
+    // Mengembalikan data user yang baru dibuat
     select: {
-      username: true,
+      email: true,
       name: true,
     },
   });
 };
 
-/**
- * Fungsi untuk login user
- * @param {Object} request - Data login (username dan password)
- * @returns {Promise<Object>} Token autentikasi
- */
+// Fungsi untuk login user
 const login = async (request) => {
-  // Validasi data request menggunakan schema loginUserValidation
-  const user = validate(loginUserValidation, request);
+  // Validasi data request
+  const loginRequest = validate(loginUserValidation, request);
 
-  // Cari user berdasarkan username
-  // Hanya ambil username dan password untuk verifikasi
-  const foundUser = await prismaClient.user.findUnique({
+  // Cari user berdasarkan email
+  const user = await prismaClient.user.findUnique({
     where: {
-      username: user.username,
+      email: loginRequest.email,
     },
+    // Mengembalikan data user yang ditemukan
     select: {
-      username: true,
+      email: true,
       password: true,
     },
   });
 
-  // Jika user tidak ditemukan, throw error
-  if (!foundUser) {
-    throw new ResponseError(401, "User not found");
+  // Validasi user dan password
+  if (!user) {
+    throw new ResponseError(401, "Email or password wrong");
   }
 
-  // Verifikasi password menggunakan bcrypt
-  const isPasswordValid = await bcrypt.compare(
-    user.password,
-    foundUser.password
-  );
-  // Jika password tidak valid, throw error
+  const isPasswordValid = await bcrypt.compare(loginRequest.password, user.password);
   if (!isPasswordValid) {
-    throw new ResponseError(400, "Invalid password");
+    throw new ResponseError(401, "Email or password wrong");
   }
 
-  // Generate token unik menggunakan UUID
+  // Generate token dan update user
   const token = uuid().toString();
-
-  // Update token user di database
-  // Hanya return token untuk keamanan
   return prismaClient.user.update({
-    where: {
-      username: user.username,
-    },
+    // Update data user
     data: {
       token: token,
+    },
+    // Cari user berdasarkan email
+    where: {
+      email: user.email,
     },
     select: {
       token: true,
@@ -97,41 +83,35 @@ const login = async (request) => {
   });
 };
 
-/**
- * Fungsi untuk mendapatkan data user berdasarkan username
- * @param {string} username - Username yang akan dicari
- * @returns {Promise<Object>} Data user yang ditemukan
- */
-const getUser = async (username) => {
+// Fungsi untuk mendapatkan data user berdasarkan email
+const get = async (email) => {
   const user = await prismaClient.user.findUnique({
+    // Cari user berdasarkan email
     where: {
-      username: username,
+      email: email,
     },
+    // Mengembalikan data user yang diupdate
     select: {
-      username: true,
+      email: true,
       name: true,
-      token: true,
     },
   });
 
   if (!user) {
-    throw new ResponseError(404, "User not found");
+    throw new ResponseError(404, "User is not found");
   }
 
   return user;
 };
 
-/**
- * Fungsi untuk mendapatkan semua data user
- * @returns {Promise<Array>} Array berisi data semua user
- */
+// Fungsi untuk mendapatkan semua user
 const getAllUsers = async () => {
-  // Validasi tidak diperlukan karena tidak ada parameter input
+  // Cari semua user
   const users = await prismaClient.user.findMany({
+    // Mengembalikan data user yang ditemukan
     select: {
-      username: true,
+      email: true,
       name: true,
-      token: true,
     },
   });
 
@@ -142,10 +122,78 @@ const getAllUsers = async () => {
   return users;
 };
 
+// Fungsi untuk mengupdate data user
+const update = async (email, request) => {
+  // Validasi data request
+  const user = validate(updateUserValidation, request);
+
+  // Cek apakah user ada
+  const foundUser = await prismaClient.user.findUnique({
+    where: {
+      email: email,
+    },
+  });
+
+  if (!foundUser) {
+    throw new ResponseError(404, "User is not found");
+  }
+
+  // Siapkan data yang akan diupdate
+  const data = {};
+  if (user.name) {
+    data.name = user.name;
+  }
+  if (user.password) {
+    data.password = await bcrypt.hash(user.password, 10);
+  }
+
+  // Update data user
+  return prismaClient.user.update({
+    where: {
+      email: email,
+    },
+    data: data,
+    select: {
+      email: true,
+      name: true,
+    },
+  });
+};
+
+// Fungsi untuk logout user
+const logout = async (email) => {
+  // Cek apakah user ada
+  const user = await prismaClient.user.findUnique({
+    where: {
+      email: email,
+    },
+  });
+
+  if (!user) {
+    throw new ResponseError(404, "User is not found");
+  }
+
+  return prismaClient.user.update({
+    // Cari user berdasarkan email
+    where: {
+      email: email,
+    },
+    // Update token menjadi null
+    data: {
+      token: null,
+    },
+    select: {
+      email: true,
+    },
+  });
+};
+
 // Export fungsi-fungsi yang akan digunakan di controller
 export default {
   register,
   login,
-  getUser,
+  get,
   getAllUsers,
+  update,
+  logout,
 };

@@ -1,6 +1,19 @@
-import { web } from "./application/web.js";
-import { logger } from "./application/logging.js";
+import express from "express";
+import { router } from "./route/api.js";
+import { errorMiddleware } from "./middleware/error-middleware.js";
 
-web.listen(3000, () => {
-  logger.info("Server is running on port 3000");
+const app = express();
+
+// Middleware
+app.use(express.json());
+
+// Routes
+app.use(router);
+
+// Error handling middleware
+app.use(errorMiddleware);
+
+// Start server
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
 });

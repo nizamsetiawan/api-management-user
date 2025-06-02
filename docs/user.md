@@ -8,7 +8,7 @@ Request Body :
 
 ```json
 {
-  "username": "pzn",
+  "email": "user@example.com",
   "password": "rahasia",
   "name": "Muhammad Nizam Setiawan"
 }
@@ -19,7 +19,7 @@ Response Body Success :
 ```json
 {
   "data": {
-    "username": "pzn",
+    "email": "user@example.com",
     "name": "Muhammad Nizam Setiawan"
   }
 }
@@ -29,7 +29,7 @@ Response Body Error :
 
 ```json
 {
-  "errors": "Username already registered"
+  "errors": "Email already registered"
 }
 ```
 
@@ -41,7 +41,7 @@ Request Body :
 
 ```json
 {
-  "username": "pzn",
+  "email": "user@example.com",
   "password": "rahasia"
 }
 ```
@@ -60,7 +60,7 @@ Response Body Error :
 
 ```json
 {
-  "errors": "Username or password wrong"
+  "errors": "Email or password wrong"
 }
 ```
 
@@ -86,7 +86,7 @@ Response Body Success :
 ```json
 {
   "data": {
-    "username": "pzn",
+    "email": "user@example.com",
     "name": "Muhammad Nizam Setiawan Lagi"
   }
 }
@@ -113,7 +113,7 @@ Response Body Success:
 ```json
 {
   "data": {
-    "username": "pzn",
+    "email": "user@example.com",
     "name": "Muhammad Nizam Setiawan"
   }
 }

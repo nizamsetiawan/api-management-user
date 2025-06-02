@@ -1,8 +1,18 @@
+// Import dependencies yang diperlukan
 import express from "express";
-import { publicRouter } from "../route/public-api.js";
+import { router } from "../route/api.js";
 import { errorMiddleware } from "../middleware/error-middleware.js";
 
-export const web = express();
+// Buat instance Express
+const web = express();
+
+// Middleware untuk parsing JSON
 web.use(express.json());
-web.use(publicRouter);
+
+// Daftarkan semua route
+web.use(router);
+
+// Middleware untuk handling error
 web.use(errorMiddleware);
+
+export { web };
